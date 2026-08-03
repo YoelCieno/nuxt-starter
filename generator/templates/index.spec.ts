@@ -148,7 +148,7 @@ describe('pageSpecTemplate', () => {
 describe('utilTemplate', () => {
   it('exports a pure function with no Vue imports', () => {
     const result = utilTemplate(ctx({ camelName: 'formatPrice' }))
-    expect(result).toContain('export function formatPrice')
+    expect(result).toContain('export const formatPrice = (')
     expect(result).not.toContain("from 'vue'")
   })
 })

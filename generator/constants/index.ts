@@ -3,6 +3,8 @@ import {
   componentSpecTemplate,
   composableTemplate,
   composableSpecTemplate,
+  layoutTemplate,
+  layoutSpecTemplate,
   pageTemplate,
   pageSpecTemplate,
   utilTemplate,
@@ -13,6 +15,7 @@ import type { GeneratorContext, GeneratorType } from '../models'
 const ARTIFACT_PARTS: Record<GeneratorType, (ctx: GeneratorContext) => string[]> = {
   component: (c) => ['app', 'components', `${c.pascalName}.vue`],
   composable: (c) => ['app', 'composables', `${c.camelName}.ts`],
+  layout: (c) => ['app', 'layouts', `${c.kebabName}.vue`],
   page: (c) => ['app', 'pages', `${c.kebabName}.vue`],
   util: (c) => ['app', 'utils', `${c.kebabName}.ts`],
 }
@@ -20,6 +23,7 @@ const ARTIFACT_PARTS: Record<GeneratorType, (ctx: GeneratorContext) => string[]>
 const SPEC_PARTS: Record<GeneratorType, (ctx: GeneratorContext) => string[]> = {
   component: (c) => ['app', 'components', `${c.pascalName}.spec.ts`],
   composable: (c) => ['app', 'composables', `${c.camelName}.spec.ts`],
+  layout: (c) => ['app', 'layouts', `${c.kebabName}.spec.ts`],
   page: (c) => ['app', 'pages', `${c.kebabName}.spec.ts`],
   util: (c) => ['app', 'utils', `${c.kebabName}.spec.ts`],
 }
@@ -27,6 +31,7 @@ const SPEC_PARTS: Record<GeneratorType, (ctx: GeneratorContext) => string[]> = {
 const ARTIFACT_TEMPLATES: Record<GeneratorType, (ctx: GeneratorContext) => string> = {
   component: componentTemplate,
   composable: composableTemplate,
+  layout: layoutTemplate,
   page: pageTemplate,
   util: utilTemplate,
 }
@@ -34,6 +39,7 @@ const ARTIFACT_TEMPLATES: Record<GeneratorType, (ctx: GeneratorContext) => strin
 const SPEC_TEMPLATES: Record<GeneratorType, (ctx: GeneratorContext) => string> = {
   component: componentSpecTemplate,
   composable: composableSpecTemplate,
+  layout: layoutSpecTemplate,
   page: pageSpecTemplate,
   util: utilSpecTemplate,
 }

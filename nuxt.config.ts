@@ -1,5 +1,10 @@
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  app: {
+    head: {
+      htmlAttrs: { lang: 'en' },
+    },
+  },
+	compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@nuxt/ui', '@nuxt/a11y', '@nuxt/eslint'],
   css: ['~/assets/css/main.css'],
@@ -8,5 +13,6 @@ export default defineNuxtConfig({
       options: {},
       runOptions: { runOnly: ['wcag2a', 'wcag2aa'] },
     },
-  },
+	},
+	debug: true
 })

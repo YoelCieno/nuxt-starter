@@ -184,10 +184,54 @@ describe('${pascalName} page', () => {
 `
 }
 
+export const layoutTemplate = (ctx: GeneratorContext): string => {
+  const { kebabName } = ctx
+
+  return `<template>
+  <div class="l-${kebabName}">
+    <slot />
+  </div>
+</template>
+`
+}
+
+export const layoutSpecTemplate = (ctx: GeneratorContext): string => {
+  const { kebabName, pascalName } = ctx
+
+  return `import { describe, it, expect, afterEach } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { axe } from 'vitest-axe'
+import { h } from 'vue'
+import ${pascalName} from './${kebabName}.vue'
+
+afterEach(() => {
+  document.body.innerHTML = ''
+})
+
+describe('${pascalName} layout', () => {
+  it('renders slot content in a non-main wrapper', async () => {
+    const wrapper = await mountSuspended(${pascalName}, {
+      slots: { default: () => h('p', 'slot content') },
+    })
+    expect(wrapper.find('div.l-${kebabName}').element.tagName).toBe('DIV')
+    expect(wrapper.text()).toContain('slot content')
+  })
+
+  it('is accessible', async () => {
+    const wrapper = await mountSuspended(${pascalName}, {
+      attachTo: document.body,
+      slots: { default: () => h('main', { id: 'page-main' }, 'page content') },
+    })
+    expect(await axe(wrapper.element, { runOnly: ['wcag2a', 'wcag2aa'] })).toHaveNoViolations()
+  })
+})
+`
+}
+
 export const utilTemplate = (ctx: GeneratorContext): string => {
   const { camelName } = ctx
 
-  return `export function ${camelName}(value: string): string {
+  return `export const ${camelName} = (value: string): string => {
   return value.trim()
 }
 `
