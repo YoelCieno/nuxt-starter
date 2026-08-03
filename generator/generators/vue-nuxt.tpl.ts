@@ -1,103 +1,100 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { prompt, renderTemplate, toFile, when } from '@featherscloud/pinion'
-import { caseTransform } from '../utils/cases'
-import { kindPrompt, namePrompt, componentPrompts } from '../prompts'
+import { caseTransform } from '../utils'
+import { componentPrompts } from '../prompts'
 import type { GeneratorContext, GeneratorType } from '../models'
-import { TEMPL_TYPES } from '../models'
+import { TEMPL_KIND } from '../models'
 import { ARTIFACT_PARTS, SPEC_PARTS, ARTIFACT_TEMPLATES, SPEC_TEMPLATES, COMPONENT_FLAGS } from '../constants'
 
 const artifactTarget = (ctx: GeneratorContext): Promise<string> => {
-	return toFile(...ARTIFACT_PARTS[ctx.type](ctx))(ctx)
+	return toFile(...ARTIFACT_PARTS[ctx.kind](ctx))(ctx)
 }
-
 const specTarget = (ctx: GeneratorContext): Promise<string> => {
-	return toFile(...SPEC_PARTS[ctx.type](ctx))(ctx)
+	return toFile(...SPEC_PARTS[ctx.kind](ctx))(ctx)
 }
 
-const artifactParts = (ctx: GeneratorContext): string[] => ARTIFACT_PARTS[ctx.type](ctx)
+const artifactParts = (ctx: GeneratorContext): string[] => ARTIFACT_PARTS[ctx.kind](ctx)
+const specParts = (ctx: GeneratorContext): string[] => SPEC_PARTS[ctx.kind](ctx)
+const artifactTemplate = (ctx: GeneratorContext): string => ARTIFACT_TEMPLATES[ctx.kind](ctx)
+const specTemplate = (ctx: GeneratorContext): string => SPEC_TEMPLATES[ctx.kind](ctx)
 
-const specParts = (ctx: GeneratorContext): string[] => SPEC_PARTS[ctx.type](ctx)
-
-const artifactTemplate = (ctx: GeneratorContext): string => ARTIFACT_TEMPLATES[ctx.type](ctx)
-
-const specTemplate = (ctx: GeneratorContext): string => SPEC_TEMPLATES[ctx.type](ctx)
-
-const isTemplType = (value: string | undefined): value is GeneratorType => {
-	return value !== undefined && TEMPL_TYPES.some((kind) => kind === value)
+const isTemplKind = (value: string | undefined): value is GeneratorType => {
+	return typeof value === 'string' && TEMPL_KIND.some((kind) => kind === value)
 }
 
-const applyType = (ctx: GeneratorContext, type: string | undefined): void => {
-  if (type === undefined) return
-  if (!isTemplType(type)) {
-    throw new Error(`Unknown template type: ${type}`)
+const getKind = (kind: string | undefined): GeneratorType => {
+	if (!isTemplKind(kind)) {
+		throw new Error(`Unknown template kind: ${kind ?? 'missing'}`)
+	}
+	return kind
+}
+
+const getName = (name: string | undefined): string => {
+	if (!name) {
+		throw new Error(`Unknown template name: ${name ?? 'missing'}`)
+	}
+	return name
+}
+
+const getComponentFlags = (ctx: GeneratorContext, flags: string[]): GeneratorContext => {
+	return flags.reduce((acc, flag) => {
+		return COMPONENT_FLAGS[flag] ? { ...acc, ...COMPONENT_FLAGS[flag] } : acc
+	}, ctx)
+}
+
+const getNonInteractiveDefaults = (ctx: GeneratorContext): GeneratorContext => {
+	return process.stdin.isTTY ? ctx : {
+    ...ctx,
+    withNuxtUi: ctx.withNuxtUi ?? true,
+    needsProps: ctx.needsProps ?? true,
   }
-  ctx.type = type
 }
 
-const applyName = (ctx: GeneratorContext, name: string | undefined): void => {
-  if (name !== undefined) {
-    ctx.name = name
-  }
-}
-
-const applyComponentFlags = (ctx: GeneratorContext, flags: string[]): void => {
-  for (const flag of flags) {
-    const parsed = COMPONENT_FLAGS[flag]
-    if (parsed) {
-      Object.assign(ctx, parsed)
-    }
-  }
-}
-
-const applyNonInteractiveDefaults = (ctx: GeneratorContext): void => {
-  if (process.stdin.isTTY) return
-  if (ctx.withNuxtUi === undefined) ctx.withNuxtUi = true
-  if (ctx.needsProps === undefined) ctx.needsProps = true
-}
-
-export const readArgs = (ctx: GeneratorContext): GeneratorContext => {
+export const getArgs = (ctx: GeneratorContext): GeneratorContext => {
   const [kind, name, ...flags] = ctx.argv
-  applyType(ctx, kind)
-  applyName(ctx, name)
-  if (ctx.type === 'component') {
-    applyComponentFlags(ctx, flags)
-    applyNonInteractiveDefaults(ctx)
-  }
-  return ctx
+  const base = { ...ctx, kind: getKind(kind), name: getName(name) }
+  if (kind !== 'component') return base
+
+	const withFlags = getComponentFlags(base, flags)
+	return getNonInteractiveDefaults(withFlags)
 }
 
-const componentPromptsNeeded = (c: GeneratorContext): boolean =>
-  c.type === 'component' &&
-  c.withNuxtUi === undefined &&
-  c.needsProps === undefined &&
-  process.stdin.isTTY === true
+const hasComponentPrompt = (ctx: GeneratorContext): boolean => {
+	return ctx.kind === 'component' &&
+	  ctx.withNuxtUi === undefined &&
+	  ctx.needsProps === undefined &&
+	  !!process.stdin.isTTY
+}
 
-export const renderSourceFiles = (ctx: GeneratorContext) =>
-  Promise.resolve(ctx).then(renderTemplate(artifactTemplate, artifactTarget))
+export const renderSourceFiles = (ctx: GeneratorContext): Promise<GeneratorContext> => {
+	return Promise.resolve(ctx).then(renderTemplate(artifactTemplate, artifactTarget))
+}
 
-export const renderSpecFiles = (ctx: GeneratorContext) =>
-  Promise.resolve(ctx).then(renderTemplate(specTemplate, specTarget))
+export const renderSpecFiles = (ctx: GeneratorContext): Promise<GeneratorContext> => {
+	return Promise.resolve(ctx).then(renderTemplate(specTemplate, specTarget))
+}
 
-export const verifyScaffold = (ctx: GeneratorContext): GeneratorContext => {
+const getMissingScaffoldFiles = (ctx: GeneratorContext): string[] => {
   const artifact = join(ctx.cwd, ...artifactParts(ctx))
   const spec = join(ctx.cwd, ...specParts(ctx))
-  const missing = [artifact, spec].filter((file) => !existsSync(file))
+  return [artifact, spec].filter((file) => !existsSync(file))
+}
+
+export const verifyScaffold = (ctx: GeneratorContext): GeneratorContext => {
+  const missing = getMissingScaffoldFiles(ctx)
   if (missing.length === 0) {
-    ctx.pinion.logger.notice(`✅ ${ctx.type} "${ctx.name}" created successfully`)
+    ctx.pinion.logger.notice(`✅ ${ctx.kind} "${ctx.name}" created successfully`)
   } else {
     ctx.pinion.logger.warn(`⚠️  ${missing.length} file(s) missing — check generator output`)
   }
   return ctx
 }
 
-export const generate = (ctx: GeneratorContext) =>
-  Promise.resolve(ctx)
-    .then(readArgs)
-    .then(when((c: GeneratorContext) => !c.type, prompt([kindPrompt])))
-    .then(when((c: GeneratorContext) => !c.name, prompt([namePrompt])))
-    .then(caseTransform<GeneratorContext>())
-    .then(when(componentPromptsNeeded, prompt(componentPrompts)))
-    .then(renderSourceFiles)
-    .then(renderSpecFiles)
-    .then(verifyScaffold)
+export const generate = (ctx: GeneratorContext) => Promise.resolve(ctx)
+  .then(getArgs)
+  .then(caseTransform<GeneratorContext>())
+  .then(when(hasComponentPrompt, prompt(componentPrompts)))
+  .then(renderSourceFiles)
+  .then(renderSpecFiles)
+  .then(verifyScaffold)
