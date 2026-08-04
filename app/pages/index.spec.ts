@@ -8,9 +8,9 @@ afterEach(() => {
 })
 
 describe('Index page', () => {
-  it('renders', async () => {
+  it('renders link text', async () => {
     const wrapper = await mountSuspended(Index)
-    expect(wrapper.text()).toContain('First Page')
+    expect(wrapper.text()).toContain('Start Questionnaire')
   })
 
   it('is accessible', async () => {

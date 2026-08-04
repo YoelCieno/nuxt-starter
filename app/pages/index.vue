@@ -1,15 +1,15 @@
 <script setup lang="ts">
 useHead({
-  title: 'First Page',
+  title: 'Index',
 })
 </script>
 
 <template>
-  <main>
-    <h1>First Page</h1>
-  </main>
+  <UButton class="index__button" to="/questionnaire">Start Questionnaire</UButton>
 </template>
 
-<style>
-
+<style scoped>
+.index__button {
+	margin-top: 2rem;
+}
 </style>

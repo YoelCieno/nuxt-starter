@@ -1,2 +1,23 @@
-@import "tailwindcss";
 @import "@nuxt/ui";
+@import "tailwindcss";
+
+:root {
+  --ui-primary: #15803d;
+  --ui-error: #b91c1c;
+}
+
+.dark {
+  --ui-primary: #4ade80;
+  --ui-error: #f87171;
+}
+
+h1 {
+	font-size: 2rem;
+}
+
+main {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  margin-top: 1rem;
+}
